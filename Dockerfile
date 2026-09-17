@@ -1,16 +1,31 @@
-# Gunakan image Nginx ringan berbasis Alpine
-FROM nginx:alpine
+FROM node:20-alpine AS dependencies
+WORKDIR /app
 
-# Menyalin konfigurasi kustom nginx (jika ada, opsional)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Salin file statis ke direktori default Nginx
-COPY index.html /usr/share/nginx/html/
-COPY styles.css /usr/share/nginx/html/
-COPY script.js /usr/share/nginx/html/
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-# Expose port 80
-EXPOSE 80
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
 
-# Jalankan Nginx
-CMD ["nginx", "-g", "daemon off;"]
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package-lock.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.mjs ./
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

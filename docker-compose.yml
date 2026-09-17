@@ -1,9 +1,13 @@
-version: '3.8'
-
 services:
-  web:
-    build: .
+  handtech-website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lp-handtech-website
+    restart: unless-stopped
     ports:
-      - "8080:80"
-    restart: always
-    container_name: handtech-landing-page
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
